@@ -11,10 +11,12 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
     "@google/genai": "^2.10.0",
+    "@sparticuz/chromium-min": "^149.0.0",
     "next": "16.2.9",
     "pdf-parse": "^2.4.5",
     "pg": "^8.22.0",
     "puppeteer": "^25.3.0",
+    "puppeteer-core": "^25.3.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },

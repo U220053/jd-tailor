@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+import puppeteerCore from "puppeteer-core";
+import chromium from "@sparticuz/chromium-min";
 import { writeFile } from "fs/promises";
 import path from "path";
+
+async function getBrowser() {
+  if (process.env.VERCEL) {
+    const executablePath = await chromium.executablePath(
+      "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar"
+    );
+    return puppeteerCore.launch({
+      args: chromium.args,
+      executablePath,
+      headless: true,
+    });
+  }
+  // Local dev: use the full puppeteer's bundled Chromium
+  const { default: puppeteer } = await import("puppeteer");
+  return puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+}
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -123,10 +140,7 @@ export async function POST(req: NextRequest) {
 
   const html = buildResumeHTML(data);
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox"],
-  });
+  const browser = await getBrowser();
 
   try {
     const page = await browser.newPage();
