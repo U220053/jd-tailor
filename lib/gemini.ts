@@ -2,25 +2,46 @@ import { GoogleGenAI, type GenerateContentResponse } from "@google/genai";
 
 export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Ordered by preference; we fall through to the next model on repeated 503s.
-export const MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"] as const;
+// Ordered by preference. gemini-2.5-flash-lite is a valid fallback with a
+// SEPARATE free-tier quota, so we can serve requests when the primary model is
+// rate-limited. (gemini-2.0-flash is not available on this API and 404s.)
+export const MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"] as const;
 
-function is503(err: unknown): boolean {
+/** Marker prefix so callers can detect quota/rate-limit exhaustion. */
+export const QUOTA_MARKER = "QUOTA_EXCEEDED";
+
+function classify(err: unknown): { overloaded: boolean; quota: boolean } {
   const e = err as { status?: number; message?: string };
-  return e?.status === 503 || (e?.message?.includes("503") ?? false);
+  const msg = e?.message ?? "";
+  return {
+    overloaded: e?.status === 503 || msg.includes("503"),
+    quota:
+      e?.status === 429 ||
+      msg.includes("429") ||
+      /RESOURCE_EXHAUSTED|quota/i.test(msg),
+  };
 }
 
 /**
- * Core generate call with 503 backoff + model fallback. Returns the full
- * response so tool-use turns can read functionCalls/candidates. `contents`
- * accepts a prompt string or a multi-turn contents array.
+ * Core generate call with backoff + model fallback. Returns the full response
+ * so tool-use turns can read functionCalls/candidates. `contents` accepts a
+ * prompt string or a multi-turn contents array.
+ *
+ * - 503 (overloaded): short exponential backoff on the same model, then fall
+ *   through to the next model.
+ * - 429 (quota/rate limit): fall straight to the next model (separate quota);
+ *   waiting wouldn't help within one request. If every model is exhausted,
+ *   throw an error prefixed with QUOTA_MARKER so the route can show a friendly
+ *   message instead of Google's raw JSON.
  */
 export async function generateWithRetry(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contents: any,
   config?: Record<string, unknown>
 ): Promise<GenerateContentResponse> {
+  let sawQuota = false;
   for (let i = 0; i < MODELS.length; i++) {
+    const lastModel = i === MODELS.length - 1;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         return await ai.models.generateContent({
@@ -29,16 +50,26 @@ export async function generateWithRetry(
           config,
         });
       } catch (err) {
-        if (is503(err) && attempt < 2) {
+        const { overloaded, quota } = classify(err);
+        if (quota) sawQuota = true;
+
+        if (overloaded && attempt < 2) {
           await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
           continue;
         }
-        if (is503(err) && i < MODELS.length - 1) break; // try next model
+        if ((overloaded || quota) && !lastModel) break; // try next model
+        if (quota) {
+          throw new Error(
+            `${QUOTA_MARKER}: Gemini rate/quota limit hit. ${(err as Error).message ?? ""}`
+          );
+        }
         throw err;
       }
     }
   }
-  throw new Error("all models exhausted");
+  throw new Error(
+    sawQuota ? `${QUOTA_MARKER}: all models rate-limited` : "all models exhausted"
+  );
 }
 
 /** Single text generation with 503 backoff + model fallback. */

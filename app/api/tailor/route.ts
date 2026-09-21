@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { RESUME_TEXT } from "@/lib/resume";
+import { QUOTA_MARKER } from "@/lib/gemini";
 import { buildPrompt, generateTailored } from "@/lib/schema";
 
 export async function POST(req: NextRequest) {
@@ -15,8 +16,18 @@ export async function POST(req: NextRequest) {
     // Schema-validated, retry-on-failure, guards against fabricated skills.
     parsed = await generateTailored(prompt, resumeText);
   } catch (err) {
+    const message = (err as Error).message ?? "";
+    if (message.includes(QUOTA_MARKER)) {
+      return NextResponse.json(
+        {
+          error:
+            "The AI is rate-limited right now (Gemini free-tier quota). Wait a minute and try again, or enable billing on your Gemini API key for higher limits.",
+        },
+        { status: 429 }
+      );
+    }
     return NextResponse.json(
-      { error: "Failed to generate a valid tailored resume", detail: (err as Error).message },
+      { error: "Failed to generate a valid tailored resume", detail: message },
       { status: 502 }
     );
   }
