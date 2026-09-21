@@ -366,7 +366,7 @@ export default function Home() {
           <div className="mt-4">
             <a
               href={downloadUrl}
-              download
+              download="tailored-resume.pdf"
               className="flex items-center justify-center gap-2 w-full bg-gray-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

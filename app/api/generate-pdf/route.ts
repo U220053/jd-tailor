@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium-min";
-import { writeFile } from "fs/promises";
-import path from "path";
+
+// The pack version MUST match the installed @sparticuz/chromium-min major
+// (currently 149); a mismatch fails to launch. Vercel runs x64.
+const CHROMIUM_PACK =
+  "https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.x64.tar";
 
 async function getBrowser() {
   if (process.env.VERCEL) {
-    const executablePath = await chromium.executablePath(
-      "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar"
-    );
+    const executablePath = await chromium.executablePath(CHROMIUM_PACK);
     return puppeteerCore.launch({
       args: chromium.args,
       executablePath,
@@ -137,12 +138,11 @@ function buildResumeHTML(data: any): string {
 
 export async function POST(req: NextRequest) {
   const data = await req.json();
-
   const html = buildResumeHTML(data);
 
-  const browser = await getBrowser();
-
+  let browser;
   try {
+    browser = await getBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
 
@@ -151,12 +151,20 @@ export async function POST(req: NextRequest) {
       margin: { top: "20px", bottom: "20px", left: "20px", right: "20px" },
     });
 
-    const filename = `resume-${Date.now()}.pdf`;
-    const filepath = path.join(process.cwd(), "public", "downloads", filename);
-    await writeFile(filepath, pdfBuffer);
-
-    return NextResponse.json({ downloadUrl: `/downloads/${filename}` });
+    // Return the PDF inline as a data: URL. Vercel's filesystem is read-only
+    // (except /tmp, which isn't web-served), so we never write to disk — the
+    // <a href download> in the client consumes the data URL directly.
+    const base64 = Buffer.from(pdfBuffer).toString("base64");
+    return NextResponse.json({
+      downloadUrl: `data:application/pdf;base64,${base64}`,
+    });
+  } catch (err) {
+    // Return JSON (not an HTML 500) so the client can surface a real message.
+    return NextResponse.json(
+      { error: "PDF generation failed", detail: (err as Error).message },
+      { status: 500 }
+    );
   } finally {
-    await browser.close();
+    await browser?.close();
   }
 }
