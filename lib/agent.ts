@@ -1,5 +1,5 @@
 import { Type, type ToolListUnion } from "@google/genai";
-import { ai, MODELS } from "./gemini";
+import { generateWithRetry } from "./gemini";
 import { fetch_jd, get_resume_section, score_match } from "./tools";
 
 // ---------------------------------------------------------------------------
@@ -72,11 +72,7 @@ export async function runAgent(
   const steps: { tool: string; args: unknown }[] = [];
 
   for (let i = 0; i < maxSteps; i++) {
-    const res = await ai.models.generateContent({
-      model: MODELS[0],
-      contents,
-      config: { tools },
-    });
+    const res = await generateWithRetry(contents, { tools });
 
     const calls = res.functionCalls ?? [];
     if (!calls.length) return { text: res.text ?? "", steps };

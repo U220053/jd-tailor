@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type GenerateContentResponse } from "@google/genai";
 
 export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -11,22 +11,23 @@ function is503(err: unknown): boolean {
 }
 
 /**
- * Single text generation with 503 backoff + model fallback.
- * Optionally accepts a tools/config passthrough for tool-use turns.
+ * Core generate call with 503 backoff + model fallback. Returns the full
+ * response so tool-use turns can read functionCalls/candidates. `contents`
+ * accepts a prompt string or a multi-turn contents array.
  */
-export async function callGemini(
-  prompt: string,
+export async function generateWithRetry(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  contents: any,
   config?: Record<string, unknown>
-): Promise<string> {
+): Promise<GenerateContentResponse> {
   for (let i = 0; i < MODELS.length; i++) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const res = await ai.models.generateContent({
+        return await ai.models.generateContent({
           model: MODELS[i],
-          contents: prompt,
+          contents,
           config,
         });
-        return res.text ?? "";
       } catch (err) {
         if (is503(err) && attempt < 2) {
           await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt));
@@ -38,4 +39,13 @@ export async function callGemini(
     }
   }
   throw new Error("all models exhausted");
+}
+
+/** Single text generation with 503 backoff + model fallback. */
+export async function callGemini(
+  prompt: string,
+  config?: Record<string, unknown>
+): Promise<string> {
+  const res = await generateWithRetry(prompt, config);
+  return res.text ?? "";
 }
