@@ -1,0 +1,13 @@
+{
+  "name": "Frontend Performance Engineer",
+  "resume": "Sara Lin\nFrontend Engineer\n\nEXPERIENCE\nSenior Frontend Engineer | Pixel Co | 2022 - Present\n- Rebuilt a design system in React and TypeScript, lifting Lighthouse performance from 62 to 94.\n- Led migration to Next.js App Router, cutting time-to-interactive by 40% for 2M monthly users.\n- Drove WCAG AA accessibility across the product, closing 120+ audit issues.\nFrontend Developer | Brightside | 2019 - 2022\n- Shipped a component library adopted by 6 product teams with Storybook and Tailwind CSS.\n- Added Playwright end-to-end tests, reducing regressions by 35%.\n\nTECHNICAL SKILLS\nLanguages: TypeScript, JavaScript, HTML, CSS\nFrameworks: React, Next.js, Redux, Tailwind CSS\nTesting: Jest, Playwright, Cypress, Storybook\nTooling: Webpack, Vite, Figma, GraphQL",
+  "jd": "Optimize Core Web Vitals and Lighthouse scores. Deep knowledge of React rendering, Vite, code splitting, and time-to-interactive improvements.",
+  "jdKeywords": [
+    "core web vitals",
+    "lighthouse",
+    "react",
+    "vite",
+    "code splitting",
+    "time-to-interactive"
+  ]
+}

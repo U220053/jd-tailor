@@ -1,0 +1,14 @@
+{
+  "name": "Blockchain Infrastructure Engineer",
+  "resume": "Aarav Mehta\nFullstack / Blockchain Developer\n\nEXPERIENCE\nBlockchain Engineer | ChainForge Labs | 2023 - Present\n- Built a self-custody staking DApp with DAML smart contracts, processing 10,000+ token operations at 99.9% uptime.\n- Integrated an EVM-compatible Bitcoin L2 using Ethers.js and wagmi, enabling multi-chain DeFi for 5,000+ users.\n- Operated validator infrastructure on GCP with Docker Compose, cutting incident response time by 60%.\nFullstack Developer | Rivera Money | 2021 - 2023\n- Added multi-chain support for 5 networks with web3.js, onboarding 10,000+ wallets.\n- Built React + Redux dashboards and Node.js indexers handling 50K+ daily transactions.\n\nTECHNICAL SKILLS\nLanguages: TypeScript, JavaScript, DAML, Solidity\nBlockchain: Ethers.js, Wagmi, Web3.js, Canton Network\nFrameworks: React, Next.js, Node.js, Express, Redux\nDatabase: MongoDB, PostgreSQL\nDevOps: Docker, GCP, AWS, nginx, CI/CD",
+  "jd": "Operate validator nodes and blockchain infrastructure on GCP and AWS. Docker Compose, monitoring, incident response, and 99.9% uptime targets.",
+  "jdKeywords": [
+    "validator",
+    "gcp",
+    "aws",
+    "docker",
+    "monitoring",
+    "incident",
+    "uptime"
+  ]
+}

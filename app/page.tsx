@@ -29,6 +29,7 @@ interface TailorResult {
 
 const STEPS = {
   idle: { label: "", pct: 0 },
+  fetching: { label: "Agent fetching & scoring the job posting...", pct: 30 },
   tailoring: { label: "Parsing resume & tailoring with AI...", pct: 60 },
   generating: { label: "Generating PDF...", pct: 90 },
   done: { label: "Done!", pct: 100 },
@@ -36,6 +37,7 @@ const STEPS = {
 
 export default function Home() {
   const [jobDescription, setJobDescription] = useState("");
+  const [jdUrl, setJdUrl] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -44,28 +46,52 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<keyof typeof STEPS>("idle");
   const [error, setError] = useState("");
+  const [missing, setMissing] = useState<string[]>([]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!resumeFile) return;
+    if (!jobDescription.trim() && !jdUrl.trim()) {
+      setError("Paste a job description or provide a job-posting URL.");
+      return;
+    }
 
     setLoading(true);
     setError("");
     setResult(null);
     setDownloadUrl("");
+    setMissing([]);
 
     try {
-      setStep("tailoring");
       const formData = new FormData();
       formData.append("resume", resumeFile);
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(uploadData.error || "Failed to parse resume PDF");
 
+      // If a URL was given, let the tool-use agent fetch & score the JD first.
+      let jd = jobDescription;
+      if (jdUrl.trim()) {
+        setStep("fetching");
+        const agentRes = await fetch("/api/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: jdUrl, resumeText: uploadData.text }),
+        });
+        const agentData = await agentRes.json();
+        if (!agentRes.ok) throw new Error(agentData.error || "Agent failed to fetch the JD");
+        if (agentData.jobDescription) {
+          jd = agentData.jobDescription;
+          setJobDescription(agentData.jobDescription);
+        }
+        if (Array.isArray(agentData.missing)) setMissing(agentData.missing);
+      }
+
+      setStep("tailoring");
       const tailorRes = await fetch("/api/tailor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription, resumeText: uploadData.text, company, role }),
+        body: JSON.stringify({ jobDescription: jd, resumeText: uploadData.text, company, role }),
       });
       const tailored = await tailorRes.json();
       if (!tailorRes.ok) throw new Error(tailored.error || "Tailoring failed");
@@ -162,14 +188,26 @@ export default function Home() {
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Job Description <span className="text-red-400">*</span>
+                Job posting URL <span className="text-gray-400">(optional — the agent fetches & scores it)</span>
+              </label>
+              <input
+                placeholder="https://careers.example.com/jobs/senior-engineer"
+                value={jdUrl}
+                onChange={(e) => setJdUrl(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Job Description {!jdUrl.trim() && <span className="text-red-400">*</span>}
+                {jdUrl.trim() && <span className="text-gray-400"> (leave blank to use the URL)</span>}
               </label>
               <textarea
                 placeholder="Paste the full job description here..."
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
                 rows={10}
-                required
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
               />
             </div>
@@ -224,6 +262,14 @@ export default function Home() {
             {result.relevanceNotes && (
               <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 text-sm text-blue-800">
                 <span className="font-medium">Tip: </span>{result.relevanceNotes}
+              </div>
+            )}
+
+            {/* Agent gap analysis */}
+            {missing.length > 0 && (
+              <div className="bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-sm text-amber-800">
+                <span className="font-medium">JD keywords not found in your resume: </span>
+                {missing.join(", ")}
               </div>
             )}
 

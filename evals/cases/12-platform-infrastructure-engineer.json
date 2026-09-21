@@ -1,0 +1,13 @@
+{
+  "name": "Platform / Infrastructure Engineer",
+  "resume": "Diego Ramos\nBackend / Platform Engineer\n\nEXPERIENCE\nBackend Engineer | DataPipe | 2021 - Present\n- Designed a Go and Python microservices platform on Kubernetes serving 30K requests/sec.\n- Built event-driven pipelines with Kafka processing 2B events/day at p99 under 120ms.\n- Cut cloud spend 28% by right-sizing AWS workloads and adding autoscaling.\nSoftware Engineer | Nimbus | 2018 - 2021\n- Authored REST and gRPC APIs in Python with PostgreSQL and Redis caching.\n- Introduced Terraform IaC and CI/CD, dropping deploy time from 40 to 6 minutes.\n\nTECHNICAL SKILLS\nLanguages: Go, Python, SQL\nBackend: gRPC, REST, Kafka, Redis\nInfra: Kubernetes, Docker, Terraform, AWS\nDatabase: PostgreSQL, DynamoDB",
+  "jd": "Own infrastructure as code with Terraform, CI/CD pipelines, Docker and AWS. Improve deploy speed and reliability.",
+  "jdKeywords": [
+    "terraform",
+    "ci/cd",
+    "docker",
+    "aws",
+    "infrastructure",
+    "deploy"
+  ]
+}
