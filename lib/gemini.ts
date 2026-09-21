@@ -2,10 +2,11 @@ import { GoogleGenAI, type GenerateContentResponse } from "@google/genai";
 
 export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-// Ordered by preference. gemini-2.5-flash-lite is a valid fallback with a
-// SEPARATE free-tier quota, so we can serve requests when the primary model is
-// rate-limited. (gemini-2.0-flash is not available on this API and 404s.)
-export const MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"] as const;
+// Ordered by preference. Both are confirmed callable on this API with distinct
+// free-tier quotas, so the lite model serves as a fallback when the primary is
+// rate-limited. (gemini-2.0-flash 404s; gemini-2.5-flash-lite is "no longer
+// available to new users" — both replaced here.)
+export const MODELS = ["gemini-3.5-flash", "gemini-3.5-flash-lite"] as const;
 
 /** Marker prefix so callers can detect quota/rate-limit exhaustion. */
 export const QUOTA_MARKER = "QUOTA_EXCEEDED";
