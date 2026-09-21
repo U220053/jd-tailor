@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { extractText, getDocumentProxy } from "unpdf";
 
 export const runtime = "nodejs";
 
@@ -10,28 +11,13 @@ export async function POST(req: NextRequest) {
     if (!file)
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = new Uint8Array(await file.arrayBuffer());
 
-    // Extract text with pdfjs-dist directly. We deliberately avoid pdf-parse:
-    // it pulls in @napi-rs/canvas (a native binary) that fails to load on
-    // Vercel at import time, crashing the whole route. pdfjs's text-extraction
-    // path is pure JS and needs no canvas. The legacy build is Node-friendly.
-    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-    const doc = await pdfjs.getDocument({
-      data: new Uint8Array(buffer),
-      useSystemFonts: true,
-      isEvalSupported: false,
-    }).promise;
-
-    let text = "";
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      text +=
-        content.items
-          .map((it) => ("str" in it ? it.str : ""))
-          .join(" ") + "\n";
-    }
+    // unpdf wraps a serverless-ready pdfjs build with the DOM polyfills
+    // (DOMMatrix, etc.) bundled in — so it runs on Vercel's Node runtime with
+    // no native canvas binary, unlike pdf-parse / raw pdfjs-dist.
+    const pdf = await getDocumentProxy(buffer);
+    const { text } = await extractText(pdf, { mergePages: true });
 
     return NextResponse.json({ text });
   } catch (err) {
